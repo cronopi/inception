@@ -1,0 +1,66 @@
+networks:
+  nginx_network:
+  mariadb_network:
+
+services:
+  mariadb:
+    build:  
+      context: requirements/mariadb/
+      args:
+        DB_NAME: ${DB_NAME}
+        MYSQL_ADMIN_USER: ${MYSQL_ADMIN_USER}
+        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    container_name: mariadb
+    ports:
+      - 3306:3306
+    restart: always
+    volumes: 
+      - mysql:/var/lib/mysql
+    networks:
+      - mariadb_network
+
+  nginx:
+    build: ./requirements/nginx/
+    container_name: nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    restart: always
+    volumes:
+      - webserver:/var/www/html/
+    networks:
+      - nginx_network
+    depends_on:
+      - "wordpress"
+
+  wordpress:
+    tty: true
+    build: requirements/wordpress/
+    container_name: wordpress
+    env_file:
+      - .env
+    ports:
+      - "9000:9000"
+    restart: always
+    volumes:
+      - webserver:/var/www/html
+    networks:
+      - nginx_network
+      - mariadb_network
+    depends_on:
+      - "mariadb"
+
+volumes:
+    mysql:
+        driver: local
+        driver_opts:
+            type: 'none'
+            device: '/home/rcastano/data/mysql'
+            o: bind
+    webserver:
+      driver: local
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: '/home/rcastano/data/webserver'
